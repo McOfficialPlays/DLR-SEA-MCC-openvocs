@@ -39,6 +39,7 @@ export const DOM = {
     }
 };
 
+
 const KEYBOARD_ESCAPE = "Escape";
 const MOUSE_MIDDLE_CLICK = 1;
 
@@ -235,6 +236,9 @@ export function init() {
         });
 
         async function connect_hid_device(device) {
+            // Handle connect devices of Imtradex
+            if (device.productId !== 256 && device.vendorId !== 8886)
+                return;
             try {
                 await device.open();
                 device.addEventListener("inputreport", (event) => {
@@ -362,7 +366,6 @@ function button_release() {
             activate_mic_soft();
     }
 }
-
 function activate_mic_soft() {
     if (!soft_mic_active) {
         soft_mic_active = true;
@@ -395,12 +398,12 @@ function release_mic_soft() {
 export function enable_PTT_button(value) {
     if (!value) {
         use_ptt = false;
-        DOM.ptt_button.classList.add("removed");
+        //DOM.ptt_button.classList.add("removed");
         DOM.mute_button.classList.remove("removed");
     } else {
         use_ptt = true;
         DOM.mute_button.classList.add("removed");
-        DOM.ptt_button.classList.remove("removed");
+        //DOM.ptt_button.classList.remove("removed");
         release_mic_soft();
     }
 }
