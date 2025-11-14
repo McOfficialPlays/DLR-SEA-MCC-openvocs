@@ -42,6 +42,11 @@ export default class ov_WebRTC {
 
     #websocket;
 
+    // --- NEW: outbound audio sender + tx tone state ---
+    #audio_sender;
+    #tx_tone_in_progress = false;
+    #is_muted = true;   // logical mute state (for rising-edge detection)
+
     constructor(websocket, peer_configuration) {
         this.#websocket = websocket;
         this.#websocket.addEventListener(ov_Vocs.EVENT.CANDIDATE,
@@ -102,8 +107,14 @@ export default class ov_WebRTC {
     }
 
     start_playback() {
-        if (this.#audio_element)
-            this.#audio_element.play();
+        if (this.#audio_element) {
+            const playPromise = this.#audio_element.play();
+            if (playPromise && typeof playPromise.then === "function") {
+                playPromise.catch(err => {
+                    console.warn(this.#log_prefix + "audio_element.play() failed:", err);
+                });
+            }
+        }
     }
 
     //-----------------------------------------------------------------------------
@@ -152,15 +163,15 @@ export default class ov_WebRTC {
 
             track.onmute = () => {
                 console.warn(this.#log_prefix + "event track.onmute. PLEASE HANDLE!", track);
-            }
+            };
 
             track.onunmute = () => {
                 console.warn(this.#log_prefix + "event track.onunmute. PLEASE HANDLE!", track);
-            }
+            };
 
             track.onended = async () => {
                 console.warn(this.#log_prefix + "event track.onended. PLEASE HANDLE!", track);
-            }
+            };
         });
 
         this.#peer_connection.onnegotiationneeded = async (options) => {
@@ -196,6 +207,80 @@ export default class ov_WebRTC {
         };
     }
 
+    //-----------------------------------------------------------------------------
+    // outbound tone injection (TX quindar)
+    //-----------------------------------------------------------------------------
+
+    async #play_tx_tone() {
+        if (this.#tx_tone_in_progress) {
+            return;
+        }
+        if (!this.#audio_sender || !this.#audio_sender.track) {
+            console.warn(this.#log_prefix + "tx tone: no audio sender available");
+            return;
+        }
+
+        this.#tx_tone_in_progress = true;
+
+        try {
+            const ctx  = ov_Audio.audio_context();
+            const dest = ctx.createMediaStreamDestination();
+
+            const osc  = ctx.createOscillator();
+            const gain = ctx.createGain();
+
+            // "Dragon-ish" / Quindar-like tone
+            osc.type = "sine";
+            osc.frequency.value = 1969;   // Hz
+            gain.gain.value = 0.4;        // 0..1
+
+            osc.connect(gain).connect(dest);
+
+            // Optional: let local user hear the tone too
+            try {
+                gain.connect(ctx.destination);
+            } catch (e) {
+                // ignore if not allowed
+            }
+
+            const toneTrack = dest.stream.getAudioTracks()[0];
+            if (!toneTrack) {
+                console.warn(this.#log_prefix + "tx tone: no audio track in tone stream");
+                osc.disconnect();
+                this.#tx_tone_in_progress = false;
+                return;
+            }
+
+            const originalTrack = this.#audio_sender.track;
+            const durationMs = 250;           // tone length
+            const durationSec = durationMs / 1000;
+
+            await this.#audio_sender.replaceTrack(toneTrack);
+            console.log(this.#log_prefix + "tx tone: tone track active on sender");
+
+            const stopTime = ctx.currentTime + durationSec;
+            osc.start();
+            osc.stop(stopTime);
+
+            osc.onended = async () => {
+                try {
+                    await this.#audio_sender.replaceTrack(originalTrack);
+                    console.log(this.#log_prefix + "tx tone: restored original mic track");
+                } catch (err) {
+                    console.error(this.#log_prefix + "tx tone: failed to restore mic track", err);
+                }
+                try {
+                    osc.disconnect();
+                    gain.disconnect();
+                } catch (e) {}
+                this.#tx_tone_in_progress = false;
+            };
+        } catch (err) {
+            console.error(this.#log_prefix + "tx tone error:", err);
+            this.#tx_tone_in_progress = false;
+        }
+    }
+
     async create_answer(offer) {
         console.log(this.#log_prefix + "received new offer: ", offer);
         console.log(this.#log_prefix + "handle new offer");
@@ -205,15 +290,19 @@ export default class ov_WebRTC {
             return;
         }
 
-        //let sdp = new RTCSessionDescription(offer);
         try {
             console.log(this.#log_prefix + "set remote description");
             await this.#peer_connection.setRemoteDescription(offer);
             if (offer.type == "offer") {
                 console.log(this.#log_prefix + "handle sdp offer");
                 for (let track of this.#outbound_stream.stream.getTracks()) {
-                    this.#peer_connection.addTrack(track, this.#outbound_stream.stream);
+                    const sender = this.#peer_connection.addTrack(track, this.#outbound_stream.stream);
                     console.log(this.#log_prefix + " add track", track);
+
+                    if (track.kind === "audio") {
+                        this.#audio_sender = sender;
+                        console.log(this.#log_prefix + "audio sender set", sender);
+                    }
                 }
                 console.log(this.#log_prefix + "create answer");
                 let answer = await this.#peer_connection.createAnswer();
@@ -232,7 +321,7 @@ export default class ov_WebRTC {
             sdpMLineIndex: sdpMLineIndex,
             sdpMid: sdpMid,
             usernameFragment: ufrag
-        }
+        };
         console.log(this.#log_prefix + "add ICE Candidate to peer connection: ",
             candidate_wrapper);
         this.#peer_connection.addIceCandidate(candidate_wrapper);
@@ -279,13 +368,27 @@ export default class ov_WebRTC {
 
         const audio_tracks = ov_WebRTC.#local_stream.stream.getAudioTracks();
         if (audio_tracks.length > 0)
-            console.log("(ov_WebRTC): Using audio device: ${audio_tracks[0].label}");
+            console.log(`(ov_WebRTC): Using audio device: ${audio_tracks[0].label}`);
     }
 
     mute_outbound_stream(mute) {
-        console.log(this.#log_prefix + "IS MUTE", mute);
-        this.#outbound_stream.mute = mute;
+    console.log(this.#log_prefix + "IS MUTE", mute);
+
+    const wasMuted = this.#is_muted;
+    this.#is_muted = !!mute;
+
+    // Only do the tone on a rising edge, and only if user enabled it
+    const txToneEnabled =
+        (typeof window !== "undefined") && window.ov_tx_quindar_enabled === true;
+
+    if (txToneEnabled && wasMuted && !mute) {
+        // muted -> unmuted and tone enabled
+        this.#play_tx_tone();
     }
+
+    this.#outbound_stream.mute = mute;
+}
+
 
     // ----------------------------------------------------------------------------
     // send media events to signaling server
