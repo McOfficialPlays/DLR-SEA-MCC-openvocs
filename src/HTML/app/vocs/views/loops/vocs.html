@@ -20,6 +20,7 @@
                         <use xlink:href="/images/ov_icons.svg#ov_microphone"></use>
                     </svg>
                 </div>
+                 LATCH
             </button>
             <button id="push_to_talk_button" class="menu_button">
                 <div class="icon">
@@ -27,7 +28,7 @@
                         <use xlink:href="/images/ov_icons.svg#ov_microphone"></use>
                     </svg>
                 </div>
-                PTT
+                 PTT
             </button>
             <div id="menu_fullscreen_option">
                 <input checked type="checkbox" id="menu_fullscreen_checkbox">
@@ -92,24 +93,37 @@
                 <label for="speaker_test">Speaker</label>
                 <button id="speaker_test">&#8227;</button>
                 <audio loop src="/app/vocs/resources/sounds/bass.ogg" id="speaker_test_audio"></audio>
+                <audio id="rx_quindar_tone" src="/app/vocs/resources/sounds/quindar.wav" preload="auto"></audio>
                 <label for="microphone_test">Microphone</label>
                 <div id="microphone_test"><canvas loop="true"></canvas></div>
+                   <div id="music_mode_container" class="fieldset">
+        <input type="checkbox" id="music_mode_checkbox">
+        <label for="music_mode_checkbox" class="checkbox_label">
+            Music mode (disable echo / noise reduction / auto-gain)
+        </label>
+        <p style="font-size:0.75rem;opacity:0.8;margin-top:0.25rem;">
+            Best with headphones. May increase echo and background noise.
+        </p>
+    </div>
             </details>
-
+            
             <details id="advanced_options" class="fieldset main_fieldset">
                 <summary>advanced</summary>
+                
+
                 <label for="talk_options">talk options</label>
                 <div id="talk_options" class="fieldset">
                     <input checked type="checkbox" id="hardware_checkbox">
                     <label for="hardware_checkbox" class="checkbox_label">microphone with secure voice PTT</label>
-
-                    <!--input checked type="checkbox" id="multi_talk_checkbox">
-                <label for="multi_talk_checkbox">Multiple loops<br> in talk</label-->
+                        <input type="checkbox" id="tx_quindar_checkbox">
+                <label for="tx_quindar_checkbox" class="checkbox_label">Play tone at start of transmission</label>
+                    <input checked type="checkbox" id="multi_talk_checkbox">
+                <label for="multi_talk_checkbox">Multiple loops<br> in talk</label>
 
                     <div id="ptt_mute_options">
 
                         <input checked type="checkbox" id="ptt_checkbox">
-                        <label for="ptt_checkbox" class="checkbox_label">PTT</label>
+                        <label for="ptt_checkbox" class="checkbox_label"> PTT</label>
 
                         <label for="talk_trigger_options">trigger for PTT / (un)mute</label>
                         <div id="talk_trigger_options" class="fieldset">
