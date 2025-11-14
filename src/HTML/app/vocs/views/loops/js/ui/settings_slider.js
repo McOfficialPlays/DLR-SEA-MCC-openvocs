@@ -60,9 +60,39 @@ export function init() {
     DOM.mute_key_checkbox = document.getElementById("key_checkbox");
     DOM.mute_mousewheel_checkbox = document.getElementById("mousewheel_checkbox");
     DOM.add_HID = document.getElementById("add_HID");
+    DOM.tx_quindar_checkbox = document.getElementById("tx_quindar_checkbox");
 
     hide_slider();
+    if (DOM.tx_quindar_checkbox) {
+    let enabled = false;
 
+    if (typeof window !== "undefined") {
+        try {
+            const saved = window.localStorage.getItem("ov_tx_quindar");
+            enabled = saved === "1";
+        } catch (e) {
+            enabled = false;
+        }
+
+        // initialize global flag
+        window.ov_tx_quindar_enabled = enabled;
+    }
+
+    DOM.tx_quindar_checkbox.checked = !!enabled;
+
+    DOM.tx_quindar_checkbox.addEventListener("change", () => {
+        const on = DOM.tx_quindar_checkbox.checked;
+
+            if (typeof window !== "undefined") {
+                window.ov_tx_quindar_enabled = on;
+                try {
+                    window.localStorage.setItem("ov_tx_quindar", on ? "1" : "0");
+                } catch (e) {}
+
+                console.log("(vocs) TX tone", on ? "ENABLED" : "DISABLED");
+            }
+        });
+    }
     DOM.slider_button.addEventListener("click", function () {
         if (!DOM.slider.open) {
             if (DOM.audio_details.open)
