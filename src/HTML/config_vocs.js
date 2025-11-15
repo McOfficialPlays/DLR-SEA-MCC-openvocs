@@ -43,7 +43,7 @@ SHARED_MULTICAST_ADDRESSES = true;
 
 // extensions -----------------------------------------------------------------
 SIP = false;
-RECORDER = false;
+RECORDER = true;
 
 // general options ------------------------------------------------------------
 ACTIVITY_CONTENT = "display_name"; // "username" || "display_name"
@@ -51,7 +51,7 @@ ACTIVITY_CONTENT = "display_name"; // "username" || "display_name"
 // voice interface ------------------------------------------------------------
 SECURE_VOICE_PTT = false; //e.g. when using hardware ptt button with secure voice
 
-PTT = true; // if ptt is false an mute/unmute button is displayed instead
+PTT = false; // if ptt is false an mute/unmute button is displayed instead
 
 MUTE_ON_MOUSE_MIDDLE_CLICK = true;
 MUTE_KEY = true;
@@ -59,7 +59,7 @@ MUTE_KEY_DEF = " ";
 MUTE_KEY_NAME = "space bar";
 MUTE_FULLSCREEN_BUTTON = false;
 
-MULTI_TALK = false; //allow to talk in several loops at the same time
+MULTI_TALK = true; //allow to talk in several loops at the same time
 
 SCREEN_KEYBOARD = false;
 
