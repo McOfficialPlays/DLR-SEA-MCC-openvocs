@@ -44,7 +44,7 @@ SHARED_MULTICAST_ADDRESSES = true;
 PERS_ERROR_TIMEOUT = 5000;
 
 // extensions
-SIP = false;
+SIP = true;
 
 // ui options -----------------------------------------------------------------
 COLOR_MODE = "dark"; // "dark" || "light"
@@ -65,7 +65,7 @@ MUTE_KEY_DEF = " ";
 MUTE_KEY_NAME = "space bar";
 MUTE_FULLSCREEN_BUTTON = false;
 
-MULTI_TALK = false; //allow to talk in several loops at the same time
+MULTI_TALK = true; //allow to talk in several loops at the same time
 
 // debug vars -----------------------------------------------------------------
 DEBUG_USE_MEDIA_STREAM_FROM_FILE = false;
